@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 from beanie import Indexed
-from schemas import Student as StudentBase
+from ..schemas import Student as StudentBase
 
 from .document import DocumentBase
 

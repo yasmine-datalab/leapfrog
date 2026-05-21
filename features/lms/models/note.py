@@ -1,5 +1,5 @@
 """Note model"""
-from schemas import Note as NoteBase
+from ..schemas import Note as NoteBase
 
 from .document import DocumentBase
 

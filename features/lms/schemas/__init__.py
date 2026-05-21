@@ -17,3 +17,4 @@ from .certificate import Certificate, CertificateCreate
 from .student import Student, StudentCreate, StudentUpdate
 from .roles import Roles
 from .subscription import Subscription, SubscriptionStatus
+from .note import NoteCreate, NoteUpdate, Note

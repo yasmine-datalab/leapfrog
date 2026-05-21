@@ -33,7 +33,7 @@ class CourseBase(BaseModel):
     category: str
 
 
-class CourseCreate(CourseBase):
+class   CourseCreate(CourseBase):
     """Course creation model"""
 
     # category_id: UUID4
@@ -88,7 +88,7 @@ class Course(CourseBase):
     """Course model"""
 
     id: UUID4
-    image: HttpUrl
+    image: HttpUrl | str
     video: Optional[HttpUrl] = None
     # category: Category
     instructor_id: UUID4

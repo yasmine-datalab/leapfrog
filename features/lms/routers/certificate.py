@@ -12,15 +12,15 @@ from pydantic import UUID4
 from fastapi_pagination import Page
 from fastapi_keycloak import OIDCUser
 
-from models import Certificate
-from schemas import Certificate as CertificateOut, Roles
+from ..models import Certificate
+from ..schemas import Certificate as CertificateOut, Roles
 
 from utils import CustomParams, paginate_model
 
 from core import idp
 from .student import get_student_profile
 
-certificate_router = APIRouter()
+certificate_router = APIRouter(prefix="/certificates")
 
 # Need certficate generation trigger endpoint ?
 

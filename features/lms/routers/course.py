@@ -18,8 +18,8 @@ from fastapi_pagination import Page
 from pydantic import UUID4, ValidationError
 from pydantic_core import PydanticCustomError, InitErrorDetails
 
-from models import Course, CourseProgress, Lesson, Note
-from schemas import (
+from ..models import Course, CourseProgress, Lesson, Note
+from ..schemas import (
     Course as CourseBase,
     CourseUpdate,
     CourseCreate,
@@ -33,7 +33,7 @@ from utils import CustomParams, paginate_model
 
 from core import idp, get_keycloak_user
 
-from services import (
+from ..services import (
     complete_lesson,
     save_in_minio,
     generate_certificate,
@@ -66,10 +66,10 @@ class CourseProgressOut(CourseProgressBase):
 
 ######################### VIEWS #############################
 
-course_router = APIRouter()
+course_router = APIRouter(prefix="/courses")
 
 
-@course_router.post("/", response_model=CourseOut, tags=["Courses"])
+@course_router.post("/", response_model=CourseOut)
 async def create_course(
     course_create: CourseCreate = Body(...),
     image: UploadFile = File(...),
@@ -122,7 +122,7 @@ async def create_course(
     )
 
     if video is not None:
-        if video.content_type.startswith("video/"):
+        if not video.content_type.startswith("video/"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="File Type not allowed. Upload video",
@@ -133,7 +133,7 @@ async def create_course(
     return course
 
 
-@course_router.get("/", response_model=Page[CourseOut], tags=["Courses"])
+@course_router.get("/", response_model=Page[CourseOut])
 async def read_courses_or_by_instructor(
     params: CustomParams = Depends(),
     instructor_id: Optional[UUID4] = None,
@@ -155,14 +155,14 @@ async def read_courses_or_by_instructor(
         instructor_id = instructor.id
 
     if instructor_id:
-        query = Course.find(Course.instructor_id == instructor_id)
+        query = Course.find(Course.instructor == instructor_id, fetch_links=True)
 
     return await paginate_model(
         query=query, params=params, full_load=full_load, fetch_links=True
     )
 
 
-@course_router.get("/{course_id}", response_model=CourseOut, tags=["Courses"])
+@course_router.get("/{course_id}", response_model=CourseOut)
 async def read_course_by_id(
     course_id: UUID4, current_user: OIDCUser = Depends(idp.get_current_user())
 ):
@@ -171,9 +171,9 @@ async def read_course_by_id(
     return await get_course_by_id(course_id, current_user=current_user)
 
 
-@course_router.patch("/{course_id}", response_model=CourseOut, tags=["Courses"])
+@course_router.patch("/{course_id}", response_model=CourseOut)
 async def update_course(
-    course_id: str,
+    course_id: UUID4,
     course_update: CourseUpdate = Body(...),
     image: Optional[UploadFile] = File(None),
     video: Optional[UploadFile] = File(None),
@@ -210,7 +210,7 @@ async def update_course(
     return course_updated
 
 
-@course_router.delete("/{course_id}", tags=["Courses"])
+@course_router.delete("/{course_id}")
 async def delete_course(
     course_id: UUID4, current_user: OIDCUser = Depends(idp.get_current_user())
 ):
@@ -227,8 +227,7 @@ async def delete_course(
 
 @course_router.get(
     "/progress/{course_id}",
-    response_model=CourseProgressOut,
-    tags=["Student Courses Progress"],
+    response_model=CourseProgressOut
 )
 async def get_course_progress(
     course_id: UUID4,
@@ -275,8 +274,7 @@ async def get_course_progress(
 
 @course_router.get(
     "/progress/student/all",
-    response_model=Page[CourseProgressOut],
-    tags=["Student Courses Progress"],
+    response_model=Page[CourseProgressOut]
 )
 async def read_student_all_courses_process(
     student_id: Optional[UUID4] = None,
@@ -308,8 +306,7 @@ async def read_student_all_courses_process(
 
 @course_router.patch(
     "/progress/{progress_id}",
-    response_model=CourseProgressOut,
-    tags=["Student Courses Progress"],
+    response_model=CourseProgressOut
 )
 async def update_course_progress(
     progress_id: UUID4,
@@ -317,16 +314,16 @@ async def update_course_progress(
     current_user: OIDCUser = Depends(idp.get_current_user(Roles.STUDENT)),
 ):
     """Update course progress"""
-    progress = get_progress_by_id(progress_id=progress_id, current_user=current_user)
+    progress = await get_progress_by_id(progress_id=progress_id, current_user=current_user)
     fields = progress_update.model_dump(exclude_unset=True, exclude_none=True)
     progress_updated = progress.model_copy(update=fields)
-    progress_updated.save()
+    await progress_updated.save()
+    return progress_updated
 
 
 @course_router.post(
     "/progress/{course_id}/lessons/{lesson_id}/complete",
-    response_model=CourseProgressOut,
-    tags=["Student Courses Progress"],
+    response_model=CourseProgressOut
 )
 async def mark_lesson_complete(
     course_id: UUID4,
@@ -362,7 +359,7 @@ async def mark_lesson_complete(
     if updated_progress.overall_progress == 1.0:
         background_task.add_task(generate_certificate, updated_progress, user)
 
-    return await updated_progress
+    return updated_progress
 
 
 #################### COURSE CATALOG ##############################
@@ -370,8 +367,7 @@ async def mark_lesson_complete(
 
 @course_router.get(
     "/catalog/program",
-    response_model=Page[CourseProgramOut],
-    tags=["Course Catalog & Program"],
+    response_model=Page[CourseProgramOut]
 )
 async def get_courses_catalog(
     params: CustomParams = Depends(),
@@ -388,8 +384,7 @@ async def get_courses_catalog(
 
 @course_router.get(
     "/catalog/program/{course_id}",
-    response_model=CourseProgramOut,
-    tags=["Course Catalog & Program"],
+    response_model=CourseProgramOut
 )
 async def get_course_program_by_id(course_id: UUID4):
     """Read course by id in the catalog"""
@@ -420,7 +415,7 @@ async def get_course_by_id(course_id: UUID4, current_user: OIDCUser = None):
 
         instructor = await get_instructor_by_user_id(user_id=user.id)
 
-        if course.instructor_id != instructor.id:
+        if course.instructor.id != instructor.id:
 
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"

@@ -8,7 +8,7 @@ from jinja2 import StrictUndefined, Environment
 
 from fastapi_keycloak import KeycloakUser
 
-from models import CourseProgress, Certificate
+from ..models import CourseProgress, Certificate
 
 from core import logger
 from .file_service import save_certficate_in_minio

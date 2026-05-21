@@ -1,0 +1,168 @@
+
+services:
+  # 1. MongoDB Service (for your application's data)
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    # command: ["--replSet", "rs0", "--bind_ip_all"]
+    environment:
+      # Credentials for the initial MongoDB root user
+      MONGO_INITDB_ROOT_USERNAME: mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: mongo_password
+    volumes:
+      - mongo-data:/data/db # <--- Data Persistence for MongoDB
+    ports:
+      - "27017:27017" # Optional: Expose the port for local tools
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--username",
+          "mongo_user",
+          "--password",
+          "mongo_password",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app-network
+
+  # 1b. Initialisation du Replica Set MongoDB
+  
+  # 2. PostgreSQL Service (for Keycloak's data)
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - pg-data:/var/lib/postgresql/data # <--- Data Persistence for PostgreSQL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak_user -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 3. Keycloak Service (Identity and Access Management)
+  keycloak:
+    image: quay.io/keycloak/keycloak:20.0.2
+    container_name: keycloak
+    restart: always
+    environment:
+      # Keycloak Admin Credentials
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Database connection (Quarkus style)
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+      # HTTP & Hostname config for development
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HTTPS_ENABLED: "false"
+      KC_HEALTH_ENABLED: "true"
+      KC_PROXY: "none"
+    command: start-dev
+    ports:
+      - "8080:8080" # Exposed port for Keycloak
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -c ':> /dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    volumes:
+      - keycloak-data-volume:/opt/keycloak/data # <--- Persistence for Keycloak's server data
+    networks:
+      - app-network
+
+
+  # 4. MinIO Service (Object Storage)
+  minio:
+    image: minio/minio
+    container_name: minio
+    restart: always
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    environment:
+      MINIO_ROOT_USER: minio_user
+      MINIO_ROOT_PASSWORD: minio_password
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - app-network
+
+  # 5. RabbitMQ Service (Message Broker)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # Port AMQP
+      - "15672:15672" # Port Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit_user
+      RABBITMQ_DEFAULT_PASS: rabbit_password
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+      # 3. Backend FastAPI
+  backend:
+    image: yasminekd/leapfrog:1.0.9
+    container_name: backend
+    # Assurez-vous que l'application FastAPI écoute sur le port 8000
+    ports:
+      - "8000:5000" # Expose le port 8000 pour le backend API
+    env_file:
+      - ./.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network  
+
+# Define the network and persistent volumes
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  pg-data:
+  keycloak-data-volume:
+  minio-data:
+  rabbitmq-data:

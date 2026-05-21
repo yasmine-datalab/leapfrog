@@ -16,16 +16,16 @@ from fastapi_pagination import Page
 from fastapi_keycloak import OIDCUser
 
 
-from models import Lesson  # Module
-from schemas import Lesson as LessonOut, LessonUpdate, LessonCreate
+from ..models import Lesson  # Module
+from ..schemas import Lesson as LessonOut, LessonUpdate, LessonCreate
 
 from utils import CustomParams, paginate_model
-from services import save_in_minio
+from ..services import save_in_minio
 from core import idp
 
 from .module import get_module_by_id
 
-lesson_router = APIRouter(prefix="/lessons", tags=["Lessons"])
+lesson_router = APIRouter(prefix="/lessons")
 
 
 @lesson_router.post("/", response_model=LessonOut)

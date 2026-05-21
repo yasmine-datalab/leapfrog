@@ -1,0 +1,138 @@
+version: "3.8"
+
+
+services:
+  # 1. MongoDB Service (for your application's data)
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    environment:
+      # Credentials for the initial MongoDB root user
+      MONGO_INITDB_ROOT_USERNAME: mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: mongo_password
+    volumes:
+      - mongo-data:/data/db # <--- Data Persistence for MongoDB
+    ports:
+      - "27017:27017" # Optional: Expose the port for local tools
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--username",
+          "mongo_user",
+          "--password",
+          "mongo_password",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app-network
+
+  # 1b. Initialisation du Replica Set MongoDB
+  mongo_setup:
+    image: mongo:latest
+    container_name: mongo_setup
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: "no"
+    entrypoint: >
+      bash -c "
+        mongosh --host mongodb:27017
+          -u mongo_user -p mongo_password
+          --authenticationDatabase admin
+          --eval '
+            try { rs.status(); print(\"Replica set already initiated\"); }
+            catch(e) {
+              rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongodb:27017\" }] });
+              print(\"Replica set initiated\");
+            }
+          '
+      "
+
+  # 2. PostgreSQL Service (for Keycloak's data)
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data # <--- Data Persistence for PostgreSQL
+    networks:
+      - app-network
+
+  # 3. Keycloak Service (Identity and Access Management)
+  keycloak:
+    image: foundkim/ecam-keycloak:latest
+    container_name: keycloak
+    restart: always
+    environment:
+      # Keycloak Admin Credentials
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Database connection for Keycloak
+      KEYCLOAK_DATABASE_HOST: postgres
+      KEYCLOAK_DATABASE_NAME: keycloak
+      KEYCLOAK_DATABASE_USER: keycloak_user
+      KEYCLOAK_DATABASE_PASSWORD: keycloak_password
+      KEYCLOAK_DATABASE_PORT: 5432
+      # IMPORTANT: Required when running behind a reverse proxy (Nginx)
+      PROXY_ADDRESS_FORWARDING: "true"
+      # KEYCLOAK_PROXY: edge
+      KEYCLOAK_EXTRA_ARGS: "--import-realm --features=scripts"
+      # The command starts keycloak in development mode for faster startup
+      # For production, you should use 'start --optimized'
+    ports:
+      - "8080:8080" # Exposed port for Keycloak
+    depends_on:
+      - postgres
+    volumes:
+      # Optional: To import a realm on startup, place a JSON file here:
+      - ./keycloak/realm-config.json:/opt/keycloak/data/import/realm-config.json:ro
+      - keycloak-data:/opt/keycloak/data # <--- Persistence for Keycloak's server data
+    networks:
+      - app-network
+
+      # 3. Backend FastAPI
+  backend:
+
+    image: foundkim/ecam-digiflow:latest
+    container_name: backend
+    # Assurez-vous que l'application FastAPI écoute sur le port 8000
+    ports:
+      - "8000:8000" # Expose le port 8000 pour le backend API
+    env_file:
+      - ./backend.env
+
+    depends_on:
+      mongo_setup:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
+    networks:
+      - app-network  
+
+# Define the network and persistent volumes
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  postgres-data:
+  keycloak-data:

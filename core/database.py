@@ -4,7 +4,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
-from models import (
+from features.lms.models import (
     Module,
     Lesson,
     Instructor,
@@ -13,10 +13,10 @@ from models import (
     CourseProgress,
     Review,
     Certificate,
+    Note
 )
 
-from core import settings
-
+from .config import settings
 
 # pylint: disable=line-too-long
 client = AsyncIOMotorClient(
@@ -31,7 +31,16 @@ async def init_database():
     await init_beanie(
         database=client[settings.MONGO_DB],
         document_models=[
-           
+            Module,
+            Lesson,
+            Student,
+            Certificate,
+            Instructor,
+            Course,
+            CourseProgress,
+            Review,
+            Note
+
         ],
     )
 

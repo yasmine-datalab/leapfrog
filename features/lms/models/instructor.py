@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 from beanie import Indexed
-from schemas import Instructor as InstructorBase
+from ..schemas import Instructor as InstructorBase
 
 from .document import DocumentBase
 

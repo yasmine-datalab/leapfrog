@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import HTTPException, status
 from pydantic import UUID4
 
-from models import CourseProgress, Course, Lesson, Module
+from ..models import CourseProgress, Course, Lesson, Module
 
 
 async def complete_lesson(progress: CourseProgress, lesson: Lesson):

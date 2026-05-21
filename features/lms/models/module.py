@@ -3,7 +3,7 @@
 from typing import List
 from beanie import Link
 from beanie.odm.queries.find import FindMany
-from schemas import Module as ModuleBase
+from ..schemas import Module as ModuleBase
 from .lesson import Lesson
 
 from .document import DocumentBase

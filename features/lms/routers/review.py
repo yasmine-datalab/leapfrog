@@ -5,8 +5,8 @@ from pydantic import UUID4
 from fastapi_pagination import Page
 from fastapi_keycloak import OIDCUser
 
-from models import Review, Course, CourseProgress
-from schemas import Review as ReviewOut, ReviewUpdate, ReviewCreate, Roles
+from ..models import Review, Course, CourseProgress
+from ..schemas import Review as ReviewOut, ReviewUpdate, ReviewCreate, Roles
 
 from utils import CustomParams, paginate_model
 from core import idp
@@ -14,7 +14,7 @@ from core import idp
 from .student import get_student_profile
 
 
-review_router = APIRouter(prefix="/reviews", tags=["Reviews"])
+review_router = APIRouter(prefix="/reviews")
 
 
 @review_router.post("/", response_model=ReviewOut)

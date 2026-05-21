@@ -11,8 +11,8 @@ from fastapi_keycloak import OIDCUser
 from fastapi_pagination import Page
 from pydantic import UUID4, model_validator
 
-from models import Instructor
-from schemas import (
+from ..models import Instructor
+from ..schemas import (
     InstructorCreate,
     Instructor as InstructorBase,
     InstructorUpdate,
@@ -65,7 +65,7 @@ class InstructorOut(InstructorBase):
 
 ######################### VIEWS #############################
 
-instructor_router = APIRouter(prefix="/instructors", tags=["Instructors"])
+instructor_router = APIRouter(prefix="/instructors")
 
 
 @instructor_router.post("/", response_model=InstructorOut)

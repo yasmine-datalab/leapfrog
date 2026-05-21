@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_ID: str
     KEYCLOAK_CLIENT_SECRET: str
     KEYCLOAK_ADMIN_CLIENT_SECRET: str
+    KEYCLOAK_ADMIN_CLIENT_ID: str
     KEYCLOAK_REALM: str
     KEYCLOAK_CALLBACK_URI: str
 
@@ -45,7 +46,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = logging.INFO
 
     # SERVICES BASE URL
-    SUBSCRIPTION_BASE_URL: str
+    # SUBSCRIPTION_BASE_URL: str. enlever le commentaire
 
     ENV: str = "developement"
 

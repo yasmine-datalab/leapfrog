@@ -6,15 +6,15 @@ from fastapi_pagination import Page
 from fastapi_keycloak import OIDCUser
 
 from beanie import DeleteRules
-from models import Module  # Course
-from schemas import Module as ModuleOut, ModuleUpdate, ModuleCreate
+from ..models import Module  # Course
+from ..schemas import Module as ModuleOut, ModuleUpdate, ModuleCreate
 
 from utils import CustomParams, paginate_model
 from core import idp
 from .course import get_course_by_id
 
 
-module_router = APIRouter(prefix="/modules", tags=["Modules"])
+module_router = APIRouter(prefix="/modules")
 
 
 @module_router.post("/", response_model=ModuleOut)

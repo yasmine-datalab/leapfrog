@@ -1,7 +1,7 @@
 """Subscription Service"""
 
 from pydantic import UUID4
-from schemas.subscription import Subscription
+from ..schemas.subscription import Subscription
 
 from core import settings, logger, get_session
 

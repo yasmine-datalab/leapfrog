@@ -5,7 +5,18 @@ name = "pypi"
 
 [packages]
 fastapi = "*"
-
+beanie = "1.25.0"
+aio-pika = "*"
+fastapi-keycloak = "*"
+pydantic-settings = "*"
+fastapi-pagination = "0.12.6"
+motor = "3.3.2"
+minio = "*"
+jinja2 = "*"
+docxtpl = "*"
+python-multipart = "*"
+pymongo = "4.8"
+requests = "2.31.0"
 [dev-packages]
 
 [requires]

@@ -2,7 +2,7 @@
 
 from beanie.odm.queries.find import FindMany
 from pydantic import UUID4
-from schemas import Review as ReviewBase
+from ..schemas import Review as ReviewBase
 
 from .document import DocumentBase
 

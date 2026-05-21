@@ -11,20 +11,24 @@ from fastapi_keycloak import FastAPIKeycloak, KeycloakUser, OIDCUser
 from fastapi_keycloak.exceptions import UserNotFound, KeycloakError
 
 from utils import token_fetcher, token_saver
-
 from .config import settings
+from .log import logger
 
 
 def init_keycloak():
     """Init Keycloak instance for FastAPI"""
-
+    logger.info("Initializing Keycloak connection for client: %s", settings.KEYCLOAK_CLIENT_ID)
+    print("KEYCLOAK_SERVER =", settings.KEYCLOAK_SERVER)
+    print("KEYCLOAK_REALM =", settings.KEYCLOAK_REALM)
     return FastAPIKeycloak(
         server_url=settings.KEYCLOAK_SERVER,
         client_id=settings.KEYCLOAK_CLIENT_ID,
         client_secret=settings.KEYCLOAK_CLIENT_SECRET,
+        admin_client_id=settings.KEYCLOAK_ADMIN_CLIENT_ID,
         admin_client_secret=settings.KEYCLOAK_ADMIN_CLIENT_SECRET,
         realm=settings.KEYCLOAK_REALM,
         callback_uri=settings.KEYCLOAK_CALLBACK_URI,
+        ssl_verification= False
     )
 
 
@@ -39,7 +43,7 @@ def get_keycloak_user(
     """Retrieves a KeycloakUser from the current_user."""
 
     if required_roles:
-        msg = f"One of thes roles ({', '.join(required_roles)}) is required to perform this action"
+        msg = f"One of these roles ({', '.join(required_roles)}) is required to perform this action"
         if not any(role in current_user.roles for role in required_roles):
 
             raise HTTPException(
@@ -105,20 +109,31 @@ async def verify_user_id(user_id: str | None):
 def get_token():
     """get Token"""
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {
-        "client_id": settings.KEYCLOAK_CLIENT_ID,
-        "client_secret": settings.KEYCLOAK_CLIENT_SECRET,
-        "grant_type": "client_credentials",
-    }
-    response = requests.post(
-        url=idp.token_uri, headers=headers, data=data, timeout=300
-    ).json()
+    response = None
+    url = f"http://{settings.KEYCLOAK_SERVER}/realms/{settings.KEYCLOAK_REALM}/protocol/openid-connect/token"
     try:
-        return response["access_token"]
+        data = {
+            "client_id": settings.KEYCLOAK_CLIENT_ID,
+            "client_secret": settings.KEYCLOAK_CLIENT_SECRET,
+            "grant_type": "client_credentials",
+        }
+        response = requests.post(
+            url=url, headers=headers, data=data, timeout=10
+        )
+        response.raise_for_status()  # Lève une exception pour les codes d'état HTTP 4xx/5xx
+        token_data = response.json()
+
+        return token_data["access_token"]
     except Exception as e:
+        status_code = response.status_code if response is not None else "N/A"
+        error_body = response.text if response is not None else str(e)
+        logger.error(
+            "Keycloak Token Request Failed: Client ID='%s', Status=%s, Response=%s",
+            settings.KEYCLOAK_CLIENT_ID, status_code, error_body
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"The response did not contain an access_token: {response}",
+            detail="Authentication with identity provider failed",
         ) from e
 
 

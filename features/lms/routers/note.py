@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi_keycloak import OIDCUser
 from fastapi_pagination import Page
 from pydantic import UUID4
-from models import Note, CourseProgress
-from schemas import (
+from ..models import Note, CourseProgress
+from ..schemas import (
     Roles,
     Note as NoteOut,
     NoteCreate,
@@ -20,10 +20,10 @@ from .student import get_student_profile
 
 ################ Notes management #######################
 
-course_router = APIRouter(prefix="/notes", tags=["Student Courses notes"])
+note_router = APIRouter(prefix="/notes")
 
 
-@course_router.post(
+@note_router.post(
     "/",
     response_model=NoteOut,
 )
@@ -43,7 +43,7 @@ async def create_note(
     return progress
 
 
-@course_router.get("progress/{progress_id}", response_model=Page[NoteOut])
+@note_router.get("/progress/{progress_id}", response_model=Page[NoteOut])
 async def read_note(
     progress_id: UUID4,
     params: CustomParams = Depends(),
@@ -53,12 +53,12 @@ async def read_note(
 
     _ = await get_progress_by_id(progress_id=progress_id, current_user=current_user)
 
-    query = await Note.find(Note.progress_id == progress_id)
+    query = Note.find(Note.progress_id == progress_id)
 
     return await paginate_model(query=query, params=params)
 
 
-@course_router.patch(
+@note_router.patch(
     "/{note_id}",
     response_model=NoteOut,
 )
@@ -76,7 +76,7 @@ async def update_note(
     return note_updated
 
 
-@course_router.delete(
+@note_router.delete(
     "/{note_id}",
 )
 async def delete_note(

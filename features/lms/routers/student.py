@@ -11,8 +11,8 @@ from fastapi_keycloak import OIDCUser
 from fastapi_pagination import Page
 from pydantic import UUID4, model_validator
 
-from models import Student
-from schemas import (
+from ..models import Student
+from ..schemas import (
     StudentCreate,
     Student as StudentBase,
     StudentUpdate,
@@ -21,7 +21,7 @@ from schemas import (
 )
 
 from core import idp, get_keycloak_user, verify_user_id, logger
-from services import get_user_subscription
+from ..services import get_user_subscription
 from utils import CustomParams, paginate_model
 
 
@@ -67,7 +67,7 @@ class StudentOut(StudentBase):
 
 ######################### VIEWS #############################
 
-student_router = APIRouter(prefix="/students", tags=["Students"])
+student_router = APIRouter(prefix="/students")
 
 
 @student_router.post("/", response_model=StudentOut)

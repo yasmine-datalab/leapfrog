@@ -5,7 +5,7 @@ from beanie import Link, after_event, Delete
 from beanie.odm.queries.find import FindMany
 from pydantic import UUID4
 
-from schemas import (
+from ..schemas import (
     Course as CourseBase,
     CourseProgress as CourseProgressBase,
 )
@@ -46,16 +46,16 @@ class Course(DocumentBase, CourseBase):
             print("Error deleting linked documents:  %s", e)
 
     @classmethod
-    def get_instuctor_id(cls, instructor_id: str) -> FindMany["Course"]:
+    def get_instructor_id(cls, instructor_id: str) -> FindMany["Course"]:
         """Get courses by instructor id."""
 
-        return cls.find(cls.instructor_id == instructor_id, fetch_links=True)
+        return cls.find(cls.instructor == instructor_id, fetch_links=True)
 
     @classmethod
     def get_category_id(cls, category_id: str) -> FindMany["Course"]:
         """Get courses by category id."""
 
-        return cls.find(cls.category.id == category_id, fetch_links=True)
+        return cls.find(cls.category == category_id, fetch_links=True)
 
     class Settings:
         """Database setting"""

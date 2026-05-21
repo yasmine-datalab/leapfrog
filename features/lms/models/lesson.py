@@ -1,7 +1,7 @@
 """Lesson Db module"""
 
 from beanie.odm.queries.find import FindMany
-from schemas import Lesson as LessonBase
+from ..schemas import Lesson as LessonBase
 
 from .document import DocumentBase
 

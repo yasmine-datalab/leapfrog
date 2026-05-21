@@ -1,7 +1,7 @@
 """Certficate Db module"""
 
 from beanie.odm.queries.find import FindMany
-from schemas import Certificate as CertificateBase
+from ..schemas import Certificate as CertificateBase
 
 from .document import DocumentBase
 
